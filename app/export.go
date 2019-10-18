@@ -10,6 +10,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
+	"github.com/terra-project/core/x/oracle"
 	"github.com/terra-project/core/x/slashing"
 	"github.com/terra-project/core/x/staking"
 )
@@ -163,4 +164,37 @@ func (app *TerraApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []s
 			return false
 		},
 	)
+
+	/* Handle oracle state. */
+
+	// Clear all prevotes
+	app.oracleKeeper.IteratePrevotes(ctx, func(prevote oracle.PricePrevote) (stop bool) {
+		app.oracleKeeper.DeletePrevote(ctx, prevote)
+
+		return false
+	})
+
+	// Clear all votes
+	app.oracleKeeper.IterateVotes(ctx, func(vote oracle.PriceVote) (stop bool) {
+		app.oracleKeeper.DeleteVote(ctx, vote)
+		return false
+	})
+
+	// Clear all prices
+	app.oracleKeeper.IterateLunaPrices(ctx, func(denom string, price sdk.Dec) bool {
+		app.oracleKeeper.DeletePrice(ctx, denom)
+		return false
+	})
+
+	/* Handle market state. */
+
+	// clear all market pools
+	app.marketKeeper.SetTerraPoolDelta(ctx, sdk.ZeroDec())
+
+	/* Handle treasury state. */
+
+	// clear all historical issuance info
+	app.treasuryKeeper.ClearHistoricalIssuance(ctx)
+	// clear all tax proceeds
+	app.treasuryKeeper.ClearTaxProceeds(ctx)
 }
