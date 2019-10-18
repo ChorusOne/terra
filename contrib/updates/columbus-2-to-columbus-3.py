@@ -85,6 +85,8 @@ def process_raw_genesis(genesis, parsed_args):
 
         if acc['address'] == 'terra1fs7mmpducjf25j70sk3sz6k5phz2fllmyr5gwz':
             update_vesting_schedule(newAcc)
+        if acc['address'] == 'terra1nl2vrxr0qzzy4pd9m2mw0q0tvwcxe2mg8shaad':
+            update_seed_to_private_vesting_schedule(newAcc)
 
         newAccounts.append(newAcc)
 
@@ -269,8 +271,8 @@ def process_raw_genesis(genesis, parsed_args):
     # del genesis['app_state']['treasury']['params']['window_probation']
     genesis['app_state']['treasury'] = {
         'params': genesis['app_state']['treasury']['params'],
-        'tax_rate': genesis['app_state']['treasury']['tax_rate'],
-        'reward_weight': genesis['app_state']['treasury']['reward_weight'],
+        'tax_rates': [genesis['app_state']['treasury']['tax_rate']],
+        'reward_weights': [genesis['app_state']['treasury']['reward_weight']],
         'tax_cap': {},
         'tax_proceeds': [],
         'historical_issuance': []
@@ -344,6 +346,66 @@ def update_vesting_schedule(account):
     vesting_schedules.append(terra_vesting_schedule)
     account['vesting_schedules'] = vesting_schedules
 
+def update_seed_to_private_vesting_schedule(account):
+    initial_genesis_time = '2019-04-24T06:00:00.000000Z'
+    
+    # parse genesis date
+    genesis_date = dateutil.parser.parse(initial_genesis_time)
+    vesting_schedules = []
+
+    # Luna Schedule Update
+    luna_vesting_schedule = {
+        'denom': 'uluna',
+        'schedules': [
+            {
+                'start_time': str(get_time_after_n_month(genesis_date, 4)),
+                'end_time': str(get_time_after_n_month(genesis_date, 5)),
+                'ratio': '0.166000000000000000',
+            },
+            {
+                'start_time': str(get_time_after_n_month(genesis_date, 5)),
+                'end_time': str(get_time_after_n_month(genesis_date, 6)),
+                'ratio': '0.166000000000000000',
+            },
+            {
+                'start_time': str(get_time_after_n_month(genesis_date, 6)),
+                'end_time': str(get_time_after_n_month(genesis_date, 7)),
+                'ratio': '0.166000000000000000',
+            },
+            {
+                'start_time': str(get_time_after_n_month(genesis_date, 7)),
+                'end_time': str(get_time_after_n_month(genesis_date, 8)),
+                'ratio': '0.166000000000000000',
+            },
+            {
+                'start_time': str(get_time_after_n_month(genesis_date, 8)),
+                'end_time': str(get_time_after_n_month(genesis_date, 9)),
+                'ratio': '0.166000000000000000',
+            },
+            {
+                'start_time': str(get_time_after_n_month(genesis_date, 9)),
+                'end_time': str(get_time_after_n_month(genesis_date, 10)),
+                'ratio': '0.17000000000000000',
+            }
+        ]
+    }
+
+
+    # Terra vesting has no need to be updated
+    terra_vesting_schedule = {
+        'denom': 'usdr'
+    }
+
+    # Find origin terra vesting schedule and use it to new vesting schedule
+    for vesting_schedule in account['vesting_schedules']:
+        if vesting_schedule['denom'] == 'usdr':
+            terra_vesting_schedule['schedules'] = vesting_schedule['schedules']
+            break
+
+    vesting_schedules.append(luna_vesting_schedule)
+    vesting_schedules.append(terra_vesting_schedule)
+    account['vesting_schedules'] = vesting_schedules
+
 
 def get_time_after_n_month(start_date, n):
     year = start_date.year
@@ -365,5 +427,8 @@ if __name__ == '__main__':
     )
     main(parser, process_raw_genesis)
 
-
+# app_state/accounts
+# app_state/staking/delegations
+# app_state/distr/delegator_withdraw_infos
+# app_state/distr/delegator_starting_infos
 # TODO - terra1n2kzv00yjanjpjplqtwucug45lurr8tzgrvj2p -> terra1760w9ckqt5xh4urs235vm27xxkdwgeunay06v3
