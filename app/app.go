@@ -264,6 +264,10 @@ func NewTerraApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest,
 	return app
 }
 
+func (app *TerraApp) GetCodec() *codec.Codec {
+	return app.cdc
+}
+
 // Query overides query function in baseapp to change result of "/app/version" query.
 func (app *TerraApp) Query(req abci.RequestQuery) (res abci.ResponseQuery) {
 
