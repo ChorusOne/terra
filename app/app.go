@@ -88,6 +88,10 @@ func MakeCodec() *codec.Codec {
 	return cdc
 }
 
+func (app *TerraApp) GetCodec() *codec.Codec {
+	return app.cdc
+}
+
 // TerraApp is Extended ABCI application
 type TerraApp struct {
 	*bam.BaseApp
@@ -242,6 +246,22 @@ func NewTerraApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 		}
 	}
 	return app
+}
+
+func (app *TerraApp) StakingKeeper() staking.Keeper {
+	return app.stakingKeeper
+}
+
+func (app *TerraApp) DistrKeeper() distr.Keeper {
+	return app.distrKeeper
+}
+
+func (app *TerraApp) BankKeeper() bank.Keeper {
+	return app.bankKeeper
+}
+
+func (app *TerraApp) AccountKeeper() auth.AccountKeeper {
+	return app.accountKeeper
 }
 
 // BeginBlocker defines application updates at every begin block
