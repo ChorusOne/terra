@@ -275,3 +275,24 @@ func (app *TerraApp) ModuleAccountAddrs() map[string]bool {
 
 	return modAccAddrs
 }
+
+func (app *TerraApp) StakingKeeper() staking.Keeper {
+	return app.stakingKeeper
+}
+
+func (app *TerraApp) DistrKeeper() distr.Keeper {
+	return app.distrKeeper
+}
+
+func (app *TerraApp) BankKeeper() bank.Keeper {
+	return app.bankKeeper
+}
+
+func (app *TerraApp) AccountKeeper() auth.AccountKeeper {
+	return app.accountKeeper
+}
+
+func (app *TerraApp) GetCodec() *codec.Codec {
+	return app.cdc
+}
+
