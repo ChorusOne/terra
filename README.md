@@ -1,5 +1,5 @@
 # Terra Core
-![banner](docs/terra-core.png)
+![banner](banner.png)
 
 [![CircleCI](https://circleci.com/gh/terra-project/core/tree/develop.svg?style=svg&circle-token=9d02a374fccebf599abb8ae363c30e33d45acc6d)](https://circleci.com/gh/terra-project/core/tree/develop)
 [![codecov](https://codecov.io/gh/terra-project/core/branch/develop/graph/badge.svg)](https://codecov.io/gh/terra-project/core)
@@ -26,21 +26,21 @@ Terra Core builds on [Tendermint](https://github.com/tendermint/tendermint) cons
 
 ### Network
 
-- Mainnet Columbus-2 is online. [The launch repo](https://github.com/terra-project/launch) contains snapshot of the launch as well as network updates. 
+- Mainnet Columbus-3 is online. [The launch repo](https://github.com/terra-project/launch) contains snapshot of the launch as well as network updates. 
 
-- Public testnet Soju-0009 is online. [Our networks repo](https://github.com/terra-project/networks) contains latest configuration files for the testnet. [The Faucet](https://faucet.terra.money) can be used to get free tokens for the testnet. 
+- Public testnet Soju-0013 is online. [Our networks repo](https://github.com/terra-project/networks) contains latest configuration files for the testnet. [The Faucet](https://faucet.terra.money) can be used to get free tokens for the testnet. 
 
 
 ### Ecosystem
 
 - Block Explorers
     - [Terra Finder](https://finder.terra.money)
-    - [Figment Hubble](https://hubble.figment.network/terra/chains/columbus-2)
+    - [Figment Hubble](https://hubble.figment.network/terra/chains/columbus-3)
     - [Stake ID by StakingFund](https://terra.stake.id)
     - [Big Dipper by Forbole](https://terra.bigdipper.live/)
 
 - Wallet 
-    - [Terra Station](https://terra.money): Available for download on the Terra website
+    - [Terra Station](https://station.terra.money)
 
 
 ### Terra Alliance

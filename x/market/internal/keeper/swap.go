@@ -70,6 +70,18 @@ func (k Keeper) ComputeSwap(ctx sdk.Context, offerCoin sdk.Coin, askDenom string
 	// Apply only tobin tax without constant product spread
 	if offerCoin.Denom != core.MicroLunaDenom && askDenom != core.MicroLunaDenom {
 		spread = k.TobinTax(ctx)
+		illiquidTobinTaxList := k.IlliquidTobinTaxList(ctx)
+
+		// Apply highest tobin tax for the denoms in the swap operation
+		for _, tobinTax := range illiquidTobinTaxList {
+			if tobinTax.Denom == offerCoin.Denom ||
+				tobinTax.Denom == askDenom {
+				if tobinTax.TaxRate.GT(spread) {
+					spread = tobinTax.TaxRate
+				}
+			}
+		}
+
 		return
 	}
 
@@ -119,19 +131,19 @@ func (k Keeper) ComputeInternalSwap(ctx sdk.Context, offerCoin sdk.DecCoin, askD
 		return offerCoin, nil
 	}
 
-	offerRate, err := k.oracleKeeper.GetLunaPrice(ctx, offerCoin.Denom)
+	offerRate, err := k.oracleKeeper.GetLunaExchangeRate(ctx, offerCoin.Denom)
 	if err != nil {
 		return sdk.DecCoin{}, types.ErrNoEffectivePrice(types.DefaultCodespace, offerCoin.Denom)
 	}
 
-	askRate, err := k.oracleKeeper.GetLunaPrice(ctx, askDenom)
+	askRate, err := k.oracleKeeper.GetLunaExchangeRate(ctx, askDenom)
 	if err != nil {
 		return sdk.DecCoin{}, types.ErrNoEffectivePrice(types.DefaultCodespace, askDenom)
 	}
 
 	retAmount := offerCoin.Amount.Mul(askRate).Quo(offerRate)
 	if retAmount.LTE(sdk.ZeroDec()) {
-		return sdk.DecCoin{}, types.ErrInsufficientSwapCoins(types.DefaultCodespace, offerCoin.Amount.TruncateInt())
+		return sdk.DecCoin{}, types.ErrInvalidOfferCoin(types.DefaultCodespace, offerCoin.Amount.TruncateInt())
 	}
 
 	return sdk.NewDecCoinFromDec(askDenom, retAmount), nil

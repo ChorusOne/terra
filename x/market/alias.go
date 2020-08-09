@@ -12,10 +12,9 @@ import (
 
 const (
 	DefaultCodespace     = types.DefaultCodespace
-	CodeInsufficientSwap = types.CodeInsufficientSwap
+	CodeInsufficientSwap = types.CodeInvalidOfferCoin
 	CodeNoEffectivePrice = types.CodeNoEffectivePrice
 	CodeRecursiveSwap    = types.CodeRecursiveSwap
-	CodeInactive         = types.CodeInactive
 	ModuleName           = types.ModuleName
 	StoreKey             = types.StoreKey
 	RouterKey            = types.RouterKey
@@ -28,32 +27,32 @@ const (
 
 var (
 	// functions aliases
-	RegisterCodec            = types.RegisterCodec
-	ErrNoEffectivePrice      = types.ErrNoEffectivePrice
-	ErrInsufficientSwapCoins = types.ErrInsufficientSwapCoins
-	ErrRecursiveSwap         = types.ErrRecursiveSwap
-	NewGenesisState          = types.NewGenesisState
-	DefaultGenesisState      = types.DefaultGenesisState
-	ValidateGenesis          = types.ValidateGenesis
-	NewMsgSwap               = types.NewMsgSwap
-	DefaultParams            = types.DefaultParams
-	NewQuerySwapParams       = types.NewQuerySwapParams
-	NewKeeper                = keeper.NewKeeper
-	ParamKeyTable            = keeper.ParamKeyTable
-	NewQuerier               = keeper.NewQuerier
+	RegisterCodec       = types.RegisterCodec
+	ErrNoEffectivePrice = types.ErrNoEffectivePrice
+	ErrInvalidOfferCoin = types.ErrInvalidOfferCoin
+	ErrRecursiveSwap    = types.ErrRecursiveSwap
+	NewGenesisState     = types.NewGenesisState
+	DefaultGenesisState = types.DefaultGenesisState
+	ValidateGenesis     = types.ValidateGenesis
+	NewMsgSwap          = types.NewMsgSwap
+	DefaultParams       = types.DefaultParams
+	NewQuerySwapParams  = types.NewQuerySwapParams
+	NewKeeper           = keeper.NewKeeper
+	ParamKeyTable       = keeper.ParamKeyTable
+	NewQuerier          = keeper.NewQuerier
 
 	// variable aliases
-	ModuleCdc                       = types.ModuleCdc
-	TerraPoolDeltaKey               = types.TerraPoolDeltaKey
-	ParamStoreKeyBasePool           = types.ParamStoreKeyBasePool
-	ParamStoreKeyPoolRecoveryPeriod = types.ParamStoreKeyPoolRecoveryPeriod
-	ParamStoreKeyMinSpread          = types.ParamStoreKeyMinSpread
-	ParmamStoreKeyTobinTax          = types.ParmamStoreKeyTobinTax
-	DefaultBasePool                 = types.DefaultBasePool
-	DefaultPoolRecoveryPeriod       = types.DefaultPoolRecoveryPeriod
-	DefaultTerraLiquidityRatio      = types.DefaultTerraLiquidityRatio
-	DefaultMinSpread                = types.DefaultMinSpread
-	DefaultTobinTax                 = types.DefaultTobinTax
+	ModuleCdc                         = types.ModuleCdc
+	TerraPoolDeltaKey                 = types.TerraPoolDeltaKey
+	ParamStoreKeyBasePool             = types.ParamStoreKeyBasePool
+	ParamStoreKeyPoolRecoveryPeriod   = types.ParamStoreKeyPoolRecoveryPeriod
+	ParamStoreKeyMinSpread            = types.ParamStoreKeyMinSpread
+	ParmaStoreKeyTobinTax             = types.ParmaStoreKeyTobinTax
+	ParmaStoreKeyIlliquidTobinTaxList = types.ParmaStoreKeyIlliquidTobinTaxList
+	DefaultBasePool                   = types.DefaultBasePool
+	DefaultPoolRecoveryPeriod         = types.DefaultPoolRecoveryPeriod
+	DefaultMinSpread                  = types.DefaultMinSpread
+	DefaultTobinTax                   = types.DefaultTobinTax
 )
 
 type (

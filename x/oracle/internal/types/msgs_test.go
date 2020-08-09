@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMsgPricePrevote(t *testing.T) {
+func TestMsgExchangeRatePrevote(t *testing.T) {
 	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
 
 	bz, err := VoteHash("1", sdk.OneDec(), core.MicroSDRDenom, sdk.ValAddress(addrs[0]))
@@ -31,7 +31,7 @@ func TestMsgPricePrevote(t *testing.T) {
 	}
 
 	for i, tc := range tests {
-		msg := NewMsgPricePrevote(tc.hash, tc.denom, tc.voter, sdk.ValAddress(tc.voter))
+		msg := NewMsgExchangeRatePrevote(tc.hash, tc.denom, tc.voter, sdk.ValAddress(tc.voter))
 		if tc.expectPass {
 			require.Nil(t, msg.ValidateBasic(), "test: %v", i)
 		} else {
@@ -40,25 +40,28 @@ func TestMsgPricePrevote(t *testing.T) {
 	}
 }
 
-func TestMsgPriceVote(t *testing.T) {
+func TestMsgExchangeRateVote(t *testing.T) {
 	_, addrs, _, _ := mock.CreateGenAccounts(1, sdk.Coins{})
+
+	overflowExchangeRate, _ := sdk.NewDecFromStr("100000000000000000000000000000000000000000000000000000000")
 
 	tests := []struct {
 		denom      string
 		voter      sdk.AccAddress
 		salt       string
-		price      sdk.Dec
+		rate       sdk.Dec
 		expectPass bool
 	}{
 		{"", addrs[0], "123", sdk.OneDec(), false},
 		{core.MicroCNYDenom, addrs[0], "123", sdk.OneDec().MulInt64(core.MicroUnit), true},
-		{core.MicroCNYDenom, addrs[0], "123", sdk.ZeroDec(), false},
+		{core.MicroCNYDenom, addrs[0], "123", sdk.ZeroDec(), true},
+		{core.MicroCNYDenom, addrs[0], "123", overflowExchangeRate, false},
 		{core.MicroCNYDenom, sdk.AccAddress{}, "123", sdk.OneDec().MulInt64(core.MicroUnit), false},
 		{core.MicroCNYDenom, addrs[0], "", sdk.OneDec().MulInt64(core.MicroUnit), false},
 	}
 
 	for i, tc := range tests {
-		msg := NewMsgPriceVote(tc.price, tc.salt, tc.denom, tc.voter, sdk.ValAddress(tc.voter))
+		msg := NewMsgExchangeRateVote(tc.rate, tc.salt, tc.denom, tc.voter, sdk.ValAddress(tc.voter))
 		if tc.expectPass {
 			require.Nil(t, msg.ValidateBasic(), "test: %v", i)
 		} else {
@@ -72,7 +75,7 @@ func TestMsgFeederDelegation(t *testing.T) {
 
 	tests := []struct {
 		delegator  sdk.ValAddress
-		delegatee  sdk.AccAddress
+		delegate   sdk.AccAddress
 		expectPass bool
 	}{
 		{sdk.ValAddress(addrs[0]), addrs[1], true},
@@ -82,7 +85,7 @@ func TestMsgFeederDelegation(t *testing.T) {
 	}
 
 	for i, tc := range tests {
-		msg := NewMsgDelegateFeederPermission(tc.delegator, tc.delegatee)
+		msg := NewMsgDelegateFeedConsent(tc.delegator, tc.delegate)
 		if tc.expectPass {
 			require.Nil(t, msg.ValidateBasic(), "test: %v", i)
 		} else {

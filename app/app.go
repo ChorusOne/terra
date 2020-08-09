@@ -94,6 +94,8 @@ type TerraApp struct {
 	cdc *codec.Codec
 
 	invCheckPeriod uint
+	tracking       bool
+	trackingDone   bool
 
 	// keys to access the substores
 	keys  map[string]*sdk.KVStoreKey
@@ -119,7 +121,7 @@ type TerraApp struct {
 
 // NewTerraApp returns a reference to an initialized TerraApp.
 func NewTerraApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest bool,
-	invCheckPeriod uint, baseAppOptions ...func(*bam.BaseApp)) *TerraApp {
+	invCheckPeriod uint, tracking bool, baseAppOptions ...func(*bam.BaseApp)) *TerraApp {
 
 	cdc := MakeCodec()
 
@@ -139,6 +141,7 @@ func NewTerraApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 		BaseApp:        bApp,
 		cdc:            cdc,
 		invCheckPeriod: invCheckPeriod,
+		tracking:       tracking,
 		keys:           keys,
 		tkeys:          tkeys,
 	}
@@ -159,7 +162,7 @@ func NewTerraApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 	// add keepers
 	app.accountKeeper = auth.NewAccountKeeper(app.cdc, keys[auth.StoreKey], authSubspace, auth.ProtoBaseAccount)
 	sendBlackListAddrs := app.ModuleAccountAddrs()
-	delete(sendBlackListAddrs, oracle.ModuleName)
+	delete(sendBlackListAddrs, supply.NewModuleAddress(oracle.ModuleName).String())
 	app.bankKeeper = bank.NewBaseKeeper(app.accountKeeper, bankSubspace, bank.DefaultCodespace, sendBlackListAddrs)
 	app.supplyKeeper = supply.NewKeeper(app.cdc, keys[supply.StoreKey], app.accountKeeper, app.bankKeeper, maccPerms)
 	stakingKeeper := staking.NewKeeper(app.cdc, keys[staking.StoreKey], tkeys[staking.TStoreKey],
@@ -246,12 +249,53 @@ func NewTerraApp(logger log.Logger, db dbm.DB, traceStore io.Writer, loadLatest 
 
 // BeginBlocker defines application updates at every begin block
 func (app *TerraApp) BeginBlocker(ctx sdk.Context, req abci.RequestBeginBlock) abci.ResponseBeginBlock {
-	return app.mm.BeginBlock(ctx, req)
+
+	res := app.mm.BeginBlock(ctx, req)
+
+	// Load all tax caps
+	taxCaps := sdk.Coins{}
+	app.treasuryKeeper.IterateTaxCap(ctx, func(denom string, taxCap sdk.Int) bool {
+		taxCaps = append(taxCaps, sdk.NewCoin(denom, taxCap))
+		return false
+	})
+
+	// Record tax rate and tax caps as BeginBlocker event
+	events := sdk.Events{
+		sdk.NewEvent(
+			"treasury",
+			sdk.NewAttribute(
+				"tax_rate",
+				app.treasuryKeeper.GetTaxRate(ctx).String(),
+			),
+			sdk.NewAttribute(
+				"tax_caps",
+				taxCaps.Sort().String(),
+			),
+		),
+	}
+
+	res.Events = append(res.Events, events.ToABCIEvents()...)
+
+	return res
 }
 
 // EndBlocker defines application updates at every end block
 func (app *TerraApp) EndBlocker(ctx sdk.Context, req abci.RequestEndBlock) abci.ResponseEndBlock {
-	return app.mm.EndBlock(ctx, req)
+	res := app.mm.EndBlock(ctx, req)
+
+	// vesting & rank tracking
+	if app.tracking {
+		if blockTime := ctx.BlockTime(); blockTime.Hour() == 0 && blockTime.Minute() == 0 {
+			if !app.trackingDone {
+				app.trackingAll(ctx)
+				app.trackingDone = true
+			}
+		} else {
+			app.trackingDone = false
+		}
+	}
+
+	return res
 }
 
 // InitChainer defines application update at chain initialization

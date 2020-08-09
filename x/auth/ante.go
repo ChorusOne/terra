@@ -138,7 +138,7 @@ func NewAnteHandler(ak AccountKeeper, supplyKeeper types.SupplyKeeper,
 			}
 
 			// record tax proceeds
-			treasuryKeeper.RecordTaxProceeds(newCtx, stdTx.Fee.Amount)
+			treasuryKeeper.RecordEpochTaxProceeds(newCtx, taxes)
 
 			// reload the account as fees have been deducted
 			signerAccs[0] = ak.GetAccount(newCtx, signerAccs[0].GetAddress())
@@ -402,7 +402,7 @@ func filterMsgAndComputeTax(ctx sdk.Context, tk TreasuryKeeper, msgs []sdk.Msg) 
 
 // computes the stability tax according to tax-rate and tax-cap
 func computeTax(ctx sdk.Context, tk TreasuryKeeper, principal sdk.Coins) (taxes sdk.Coins) {
-	taxRate := tk.GetTaxRate(ctx, core.GetEpoch(ctx))
+	taxRate := tk.GetTaxRate(ctx)
 	if taxRate.Equal(sdk.ZeroDec()) {
 		return
 	}
@@ -461,7 +461,7 @@ func EnsureSufficientMempoolFees(ctx sdk.Context, stdFee StdFee, taxes sdk.Coins
 		).Result()
 	}
 
-	if !requiredFees.Empty() && !stdFee.Amount.IsAnyGTE(requiredFees) {
+	if !requiredFees.IsZero() && !stdFee.Amount.IsAnyGTE(requiredFees) {
 		return sdk.ErrInsufficientFee(
 			fmt.Sprintf(
 				"insufficient fees; got: %q, required: %q = %q(gas) +%q(stability)", stdFee.Amount.Add(taxes), requiredFees.Add(taxes), requiredFees, taxes,

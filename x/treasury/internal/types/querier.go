@@ -1,15 +1,20 @@
 package types
 
+import (
+	"fmt"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
+)
+
 // query endpoints supported by the auth Querier
 const (
-	QueryCurrentEpoch        = "currentEpoch"
 	QueryTaxRate             = "taxRate"
 	QueryTaxCap              = "taxCap"
 	QueryRewardWeight        = "rewardWeight"
 	QuerySeigniorageProceeds = "seigniorageProceeds"
 	QueryTaxProceeds         = "taxProceeds"
 	QueryParameters          = "parameters"
-	QueryHistoricalIssuance  = "historicalIssuance"
+	QueryIndicators          = "indicators"
 )
 
 // QueryTaxCapParams for query
@@ -25,67 +30,17 @@ func NewQueryTaxCapParams(denom string) QueryTaxCapParams {
 	}
 }
 
-// QueryTaxRateParams for query
-// - 'custom/treasury/taxRate
-type QueryTaxRateParams struct {
-	Epoch int64
+// IndicatorQueryResonse query response body
+type IndicatorQueryResonse struct {
+	TRLYear  sdk.Dec `json:"trl_year"`
+	TRLMonth sdk.Dec `json:"trl_month"`
 }
 
-// NewQueryTaxRateParams returns new QueryTaxRateParams instance
-func NewQueryTaxRateParams(epoch int64) QueryTaxRateParams {
-	return QueryTaxRateParams{
-		Epoch: epoch,
-	}
-}
+// String implements fmt.Stringer interface
+func (res IndicatorQueryResonse) String() string {
+	return fmt.Sprintf(`Treasury Params:
+  TRL Year      : %s 
+  TRL Month     : %s
 
-// QueryRewardWeightParams for query
-// - 'custom/treasury/rewardWeight
-type QueryRewardWeightParams struct {
-	Epoch int64
-}
-
-// NewQueryRewardWeightParams returns new QueryRewardWeightParams instance
-func NewQueryRewardWeightParams(epoch int64) QueryRewardWeightParams {
-	return QueryRewardWeightParams{
-		Epoch: epoch,
-	}
-}
-
-// QuerySeigniorageProceedsParams for query
-// - 'custom/treasury/seigniorageProceeds
-type QuerySeigniorageProceedsParams struct {
-	Epoch int64
-}
-
-// NewQuerySeigniorageParams returns new QuerySeigniorageProceedsParams instance
-func NewQuerySeigniorageParams(epoch int64) QuerySeigniorageProceedsParams {
-	return QuerySeigniorageProceedsParams{
-		Epoch: epoch,
-	}
-}
-
-// QueryTaxProceedsParams for query
-// - 'custom/treasury/taxProceeds
-type QueryTaxProceedsParams struct {
-	Epoch int64
-}
-
-// NewQueryTaxProceedsParams returns new QueryTaxProceedsParams instance
-func NewQueryTaxProceedsParams(epoch int64) QueryTaxProceedsParams {
-	return QueryTaxProceedsParams{
-		Epoch: epoch,
-	}
-}
-
-// QueryHistoricalIssuanceParams for query
-// - 'custom/treasury/microLunaIssuance
-type QueryHistoricalIssuanceParams struct {
-	Epoch int64
-}
-
-// NewQueryHistoricalIssuanceParams returns new QueryHistoricalIssuanceParams instance
-func NewQueryHistoricalIssuanceParams(epoch int64) QueryHistoricalIssuanceParams {
-	return QueryHistoricalIssuanceParams{
-		Epoch: epoch,
-	}
+  `, res.TRLYear, res.TRLMonth)
 }

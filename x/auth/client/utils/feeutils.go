@@ -51,7 +51,18 @@ func ComputeFeesWithStdTx(
 	sim := (gas == 0)
 
 	if sim {
-		tx.Signatures = []auth.StdSignature{{}}
+		tx.Signatures = []auth.StdSignature{}
+
+		signers := make(map[string]bool)
+		for _, msg := range tx.Msgs {
+			for _, signer := range msg.GetSigners() {
+				if _, ok := signers[signer.String()]; !ok {
+					signers[signer.String()] = true
+					tx.Signatures = append(tx.Signatures, auth.StdSignature{})
+				}
+			}
+		}
+
 		txBytes, err := utils.GetTxEncoder(cliCtx.Codec)(tx)
 		if err != nil {
 			return nil, 0, err
@@ -226,20 +237,9 @@ func computeTax(cliCtx context.CLIContext, taxRate sdk.Dec, principal sdk.Coins)
 }
 
 func queryTaxRate(cliCtx context.CLIContext) (sdk.Dec, error) {
-	// Query current-epoch
-	res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", treasury.QuerierRoute, treasury.QueryCurrentEpoch), nil)
-	if err != nil {
-		return sdk.Dec{}, err
-	}
-
-	var epoch int64
-	cliCtx.Codec.MustUnmarshalJSON(res, &epoch)
-
-	params := treasury.NewQueryTaxRateParams(epoch)
-	bz := cliCtx.Codec.MustMarshalJSON(params)
 
 	// Query tax-rate
-	res, _, err = cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", treasury.QuerierRoute, treasury.QueryTaxRate), bz)
+	res, _, err := cliCtx.QueryWithData(fmt.Sprintf("custom/%s/%s", treasury.QuerierRoute, treasury.QueryTaxRate), nil)
 	if err != nil {
 		return sdk.Dec{}, err
 	}

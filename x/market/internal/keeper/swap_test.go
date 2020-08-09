@@ -8,13 +8,14 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	core "github.com/terra-project/core/types"
+	"github.com/terra-project/core/x/market/internal/types"
 )
 
 func TestApplySwapToPool(t *testing.T) {
 	input := CreateTestInput(t)
 
 	lunaPriceInSDR := sdk.NewDecWithPrec(17, 1)
-	input.OracleKeeper.SetLunaPrice(input.Ctx, core.MicroSDRDenom, lunaPriceInSDR)
+	input.OracleKeeper.SetLunaExchangeRate(input.Ctx, core.MicroSDRDenom, lunaPriceInSDR)
 
 	offerCoin := sdk.NewCoin(core.MicroLunaDenom, sdk.NewInt(1000))
 	askCoin := sdk.NewDecCoin(core.MicroSDRDenom, sdk.NewInt(1700))
@@ -47,7 +48,7 @@ func TestComputeSwap(t *testing.T) {
 
 	// Set Oracle Price
 	lunaPriceInSDR := sdk.NewDecWithPrec(17, 1)
-	input.OracleKeeper.SetLunaPrice(input.Ctx, core.MicroSDRDenom, lunaPriceInSDR)
+	input.OracleKeeper.SetLunaExchangeRate(input.Ctx, core.MicroSDRDenom, lunaPriceInSDR)
 
 	for i := 0; i < 100; i++ {
 		swapAmountInSDR := lunaPriceInSDR.MulInt64(rand.Int63()%10000 + 2).TruncateInt()
@@ -69,7 +70,7 @@ func TestComputeInternalSwap(t *testing.T) {
 
 	// Set Oracle Price
 	lunaPriceInSDR := sdk.NewDecWithPrec(17, 1)
-	input.OracleKeeper.SetLunaPrice(input.Ctx, core.MicroSDRDenom, lunaPriceInSDR)
+	input.OracleKeeper.SetLunaExchangeRate(input.Ctx, core.MicroSDRDenom, lunaPriceInSDR)
 
 	for i := 0; i < 100; i++ {
 		offerCoin := sdk.NewDecCoin(core.MicroSDRDenom, lunaPriceInSDR.MulInt64(rand.Int63()+1).TruncateInt())
@@ -81,4 +82,46 @@ func TestComputeInternalSwap(t *testing.T) {
 	offerCoin := sdk.NewDecCoin(core.MicroSDRDenom, lunaPriceInSDR.QuoInt64(2).TruncateInt())
 	_, err := input.MarketKeeper.ComputeInternalSwap(input.Ctx, offerCoin, core.MicroLunaDenom)
 	require.Error(t, err)
+}
+
+func TestIlliquidTobinTaxListParams(t *testing.T) {
+	input := CreateTestInput(t)
+
+	// Set Oracle Price
+	lunaPriceInSDR := sdk.NewDecWithPrec(17, 1)
+	lunaPriceInMNT := sdk.NewDecWithPrec(7652, 1)
+	input.OracleKeeper.SetLunaExchangeRate(input.Ctx, core.MicroSDRDenom, lunaPriceInSDR)
+	input.OracleKeeper.SetLunaExchangeRate(input.Ctx, core.MicroMNTDenom, lunaPriceInMNT)
+
+	// Case 1: tobin tax 2% due to umnt denom
+	params := input.MarketKeeper.GetParams(input.Ctx)
+	params.TobinTax = sdk.NewDecWithPrec(25, 4)
+	params.IlliquidTobinTaxList = types.TobinTaxList{
+		types.TobinTax{
+			Denom:   core.MicroSDRDenom,
+			TaxRate: sdk.NewDecWithPrec(25, 4),
+		},
+		types.TobinTax{
+			Denom:   core.MicroMNTDenom,
+			TaxRate: sdk.NewDecWithPrec(2, 2),
+		},
+	}
+	input.MarketKeeper.SetParams(input.Ctx, params)
+
+	swapAmountInSDR := lunaPriceInSDR.MulInt64(rand.Int63()%10000 + 2).TruncateInt()
+	offerCoin := sdk.NewCoin(core.MicroSDRDenom, swapAmountInSDR)
+	_, spread, err := input.MarketKeeper.ComputeSwap(input.Ctx, offerCoin, core.MicroMNTDenom)
+	require.NoError(t, err)
+	require.Equal(t, sdk.NewDecWithPrec(2, 2), spread)
+
+	// Case 2: tobin tax 5% due to default
+	params.TobinTax = sdk.NewDecWithPrec(5, 2)
+	input.MarketKeeper.SetParams(input.Ctx, params)
+
+	swapAmountInSDR = lunaPriceInSDR.MulInt64(rand.Int63()%10000 + 2).TruncateInt()
+	offerCoin = sdk.NewCoin(core.MicroSDRDenom, swapAmountInSDR)
+	_, spread, err = input.MarketKeeper.ComputeSwap(input.Ctx, offerCoin, core.MicroMNTDenom)
+	require.NoError(t, err)
+	require.Equal(t, sdk.NewDecWithPrec(5, 2), spread)
+
 }

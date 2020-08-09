@@ -17,14 +17,16 @@ var (
 	uSDRAmt    = sdk.NewInt(1005 * core.MicroUnit)
 	stakingAmt = sdk.TokensFromConsensusPower(10)
 
-	randomPrice        = sdk.NewDec(1700)
-	anotherRandomPrice = sdk.NewDecWithPrec(4882, 2) // swap rate
+	randomExchangeRate        = sdk.NewDec(1700)
+	anotherRandomExchangeRate = sdk.NewDecWithPrec(4882, 2) // swap rate
 )
 
 func setup(t *testing.T) (keeper.TestInput, sdk.Handler) {
 	input := keeper.CreateTestInput(t)
 	params := input.OracleKeeper.GetParams(input.Ctx)
 	params.VotePeriod = 1
+	params.SlashWindow = 100
+	params.RewardDistributionWindow = 100
 	input.OracleKeeper.SetParams(input.Ctx, params)
 	h := NewHandler(input.OracleKeeper)
 
