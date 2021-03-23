@@ -8,6 +8,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/client/context"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
@@ -24,7 +25,7 @@ func GetQueryCmd(queryRoute string, cdc *codec.Codec) *cobra.Command {
 		RunE:                       client.ValidateCmd,
 	}
 
-	marketQueryCmd.AddCommand(client.GetCommands(
+	marketQueryCmd.AddCommand(flags.GetCommands(
 		GetCmdQuerySwap(queryRoute, cdc),
 		GetCmdQueryTerraPoolDelta(queryRoute, cdc),
 		GetCmdQueryParams(queryRoute, cdc),
@@ -42,7 +43,7 @@ func GetCmdQuerySwap(queryRoute string, cdc *codec.Codec) *cobra.Command {
 		Long: strings.TrimSpace(`
 Query a quote for how many coins can be received in a swap operation. Note; rates are dynamic and can quickly change.
 
-$ terracli query query swap 5000000uluna usdr
+$ terracli query swap 5000000uluna usdr
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cliCtx := context.NewCLIContext().WithCodec(cdc)

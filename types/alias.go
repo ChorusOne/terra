@@ -19,6 +19,7 @@ const (
 	MicroJPYDenom        = assets.MicroJPYDenom
 	MicroEURDenom        = assets.MicroEURDenom
 	MicroGBPDenom        = assets.MicroGBPDenom
+	MicroMNTDenom        = assets.MicroMNTDenom
 	MicroUnit            = assets.MicroUnit
 	BlocksPerMinute      = util.BlocksPerMinute
 	BlocksPerHour        = util.BlocksPerHour
@@ -26,7 +27,6 @@ const (
 	BlocksPerWeek        = util.BlocksPerWeek
 	BlocksPerMonth       = util.BlocksPerMonth
 	BlocksPerYear        = util.BlocksPerYear
-	BlocksPerEpoch       = util.BlocksPerEpoch
 	CoinType             = util.CoinType
 	FullFundraiserPath   = util.FullFundraiserPath
 	Bech32PrefixAccAddr  = util.Bech32PrefixAccAddr
@@ -39,6 +39,11 @@ const (
 
 var (
 	// functions aliases
-	GetEpoch          = util.GetEpoch
-	IsPeriodLastBlock = util.IsPeriodLastBlock
+	IsPeriodLastBlock    = util.IsPeriodLastBlock
+	IsWaitingForSoftfork = util.IsWaitingForSoftfork
+	IsSoftforkHeight     = util.IsSoftforkHeight
+)
+
+type (
+	Base64Bytes = util.Base64Bytes
 )

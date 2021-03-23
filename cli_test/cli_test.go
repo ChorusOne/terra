@@ -22,14 +22,13 @@ import (
 	"github.com/terra-project/core/app"
 	core "github.com/terra-project/core/types"
 
-	"github.com/cosmos/cosmos-sdk/client"
+	"github.com/cosmos/cosmos-sdk/client/flags"
 	"github.com/cosmos/cosmos-sdk/tests"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cosmos/cosmos-sdk/x/auth"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
-
-	distr "github.com/terra-project/core/x/distribution"
-	"github.com/terra-project/core/x/genaccounts"
-	"github.com/terra-project/core/x/gov"
+	distr "github.com/cosmos/cosmos-sdk/x/distribution"
+	"github.com/cosmos/cosmos-sdk/x/gov"
 )
 
 func init() {
@@ -371,7 +370,7 @@ func TestTerraCLICreateValidator(t *testing.T) {
 	barAddr := f.KeyAddress(keyBar)
 	barVal := sdk.ValAddress(barAddr)
 
-	consPubKey := sdk.MustBech32ifyConsPub(ed25519.GenPrivKey().PubKey())
+	consPubKey := sdk.MustBech32ifyPubKey(sdk.Bech32PubKeyTypeConsPub, ed25519.GenPrivKey().PubKey())
 
 	sendTokens := sdk.TokensFromConsensusPower(10)
 	txFees := fmt.Sprintf("--fees=%s", sdk.NewInt64Coin(denom, 10001))
@@ -476,6 +475,7 @@ func TestTerraCLIQuerySupply(t *testing.T) {
 	totalSupply := f.QueryTotalSupply()
 	totalSupplyOf := f.QueryTotalSupplyOf(fooDenom)
 
+	fmt.Println(totalCoins, totalSupply)
 	require.Equal(t, totalCoins, totalSupply)
 	require.True(sdk.IntEq(t, totalCoins.AmountOf(fooDenom), totalSupplyOf))
 
@@ -523,7 +523,7 @@ func TestTerraCLISubmitProposal(t *testing.T) {
 	tests.WaitForNextNBlocksTM(1, f.Port)
 
 	// Ensure transaction tags can be queried
-	searchResult := f.QueryTxs(1, 50, "message.action:submit_proposal", fmt.Sprintf("message.sender:%s", fooAddr))
+	searchResult := f.QueryTxs(1, 50, "message.action=submit_proposal", fmt.Sprintf("message.sender=%s", fooAddr))
 	require.Len(t, searchResult.Txs, 1)
 
 	// Ensure deposit was deducted
@@ -567,7 +567,7 @@ func TestTerraCLISubmitProposal(t *testing.T) {
 	require.Equal(t, proposalTokens.Add(depositTokens), deposit.Amount.AmountOf(denom))
 
 	// Ensure tags are set on the transaction
-	searchResult = f.QueryTxs(1, 50, "message.action:deposit", fmt.Sprintf("message.sender:%s", fooAddr))
+	searchResult = f.QueryTxs(1, 50, "message.action=deposit", fmt.Sprintf("message.sender=%s", fooAddr))
 	require.Len(t, searchResult.Txs, 1)
 
 	// Ensure account has expected amount of funds
@@ -604,7 +604,7 @@ func TestTerraCLISubmitProposal(t *testing.T) {
 	require.Equal(t, gov.OptionYes, votes[0].Option)
 
 	// Ensure tags are applied to voting transaction properly
-	searchResult = f.QueryTxs(1, 50, "message.action:vote", fmt.Sprintf("message.sender:%s", fooAddr))
+	searchResult = f.QueryTxs(1, 50, "message.action=vote", fmt.Sprintf("message.sender=%s", fooAddr))
 	require.Len(t, searchResult.Txs, 1)
 
 	// Ensure no proposals in deposit period
@@ -620,8 +620,9 @@ func TestTerraCLISubmitProposal(t *testing.T) {
 	tests.WaitForNextNBlocksTM(1, f.Port)
 
 	// Test limit on proposals query
-	proposalsQuery = f.QueryGovProposals("--limit=1")
-	require.Equal(t, uint64(2), proposalsQuery[0].ProposalID)
+	proposalsQuery = f.QueryGovProposals("--limit=2")
+	require.Len(t, proposalsQuery, 2)
+	require.Equal(t, uint64(1), proposalsQuery[0].ProposalID)
 
 	f.Cleanup()
 }
@@ -666,7 +667,7 @@ func TestTerraCLISubmitParamChangeProposal(t *testing.T) {
 	tests.WaitForNextNBlocksTM(1, f.Port)
 
 	// ensure transaction tags can be queried
-	txsPage := f.QueryTxs(1, 50, "message.action:submit_proposal", fmt.Sprintf("message.sender:%s", fooAddr))
+	txsPage := f.QueryTxs(1, 50, "message.action=submit_proposal", fmt.Sprintf("message.sender=%s", fooAddr))
 	require.Len(t, txsPage.Txs, 1)
 
 	// ensure deposit was deducted
@@ -731,7 +732,7 @@ func TestTerraCLISubmitParamChangeProposal(t *testing.T) {
 // 	tests.WaitForNextNBlocksTM(1, f.Port)
 
 // 	// ensure transaction tags can be queried
-// 	txsPage := f.QueryTxs(1, 50, "message.action:submit_proposal", fmt.Sprintf("message.sender:%s", fooAddr))
+// 	txsPage := f.QueryTxs(1, 50, "message.action=submit_proposal", fmt.Sprintf("message.sender=%s", fooAddr))
 // 	require.Len(t, txsPage.Txs, 1)
 
 // 	// ensure deposit was deducted
@@ -813,7 +814,7 @@ func TestTerraCLISubmitCommunityPoolSpendProposal(t *testing.T) {
 	tests.WaitForNextNBlocksTM(1, f.Port)
 
 	// ensure transaction tags can be queried
-	txsPage := f.QueryTxs(1, 50, "message.action:submit_proposal", fmt.Sprintf("message.sender:%s", fooAddr))
+	txsPage := f.QueryTxs(1, 50, "message.action=submit_proposal", fmt.Sprintf("message.sender=%s", fooAddr))
 	require.Len(t, txsPage.Txs, 1)
 
 	// ensure deposit was deducted
@@ -858,30 +859,30 @@ func TestTerraCLIQueryTxPagination(t *testing.T) {
 	}
 
 	// perPage = 15, 2 pages
-	txsPage1 := f.QueryTxs(1, 15, fmt.Sprintf("message.sender:%s", fooAddr))
+	txsPage1 := f.QueryTxs(1, 15, fmt.Sprintf("message.sender=%s", fooAddr))
 	require.Len(t, txsPage1.Txs, 15)
 	require.Equal(t, txsPage1.Count, 15)
-	txsPage2 := f.QueryTxs(2, 15, fmt.Sprintf("message.sender:%s", fooAddr))
+	txsPage2 := f.QueryTxs(2, 15, fmt.Sprintf("message.sender=%s", fooAddr))
 	require.Len(t, txsPage2.Txs, 15)
 	require.NotEqual(t, txsPage1.Txs, txsPage2.Txs)
 
 	// perPage = 16, 2 pages
-	txsPage1 = f.QueryTxs(1, 16, fmt.Sprintf("message.sender:%s", fooAddr))
+	txsPage1 = f.QueryTxs(1, 16, fmt.Sprintf("message.sender=%s", fooAddr))
 	require.Len(t, txsPage1.Txs, 16)
-	txsPage2 = f.QueryTxs(2, 16, fmt.Sprintf("message.sender:%s", fooAddr))
+	txsPage2 = f.QueryTxs(2, 16, fmt.Sprintf("message.sender=%s", fooAddr))
 	require.Len(t, txsPage2.Txs, 14)
 	require.NotEqual(t, txsPage1.Txs, txsPage2.Txs)
 
 	// perPage = 50
-	txsPageFull := f.QueryTxs(1, 50, fmt.Sprintf("message.sender:%s", fooAddr))
+	txsPageFull := f.QueryTxs(1, 50, fmt.Sprintf("message.sender=%s", fooAddr))
 	require.Len(t, txsPageFull.Txs, 30)
 	require.Equal(t, txsPageFull.Txs, append(txsPage1.Txs, txsPage2.Txs...))
 
 	// perPage = 0
-	f.QueryTxsInvalid(errors.New("ERROR: page must greater than 0"), 0, 50, fmt.Sprintf("message.sender:%s", fooAddr))
+	f.QueryTxsInvalid(errors.New("ERROR: page must greater than 0"), 0, 50, fmt.Sprintf("message.sender=%s", fooAddr))
 
 	// limit = 0
-	f.QueryTxsInvalid(errors.New("ERROR: limit must greater than 0"), 1, 0, fmt.Sprintf("message.sender:%s", fooAddr))
+	f.QueryTxsInvalid(errors.New("ERROR: limit must greater than 0"), 1, 0, fmt.Sprintf("message.sender=%s", fooAddr))
 
 	// Cleanup testing directories
 	f.Cleanup()
@@ -954,7 +955,7 @@ func TestTerraCLISendGenerateSignAndBroadcast(t *testing.T) {
 	require.True(t, success)
 	require.Empty(t, stderr)
 	msg := unmarshalStdTx(t, stdOut)
-	require.Equal(t, msg.Fee.Gas, uint64(client.DefaultGasLimit))
+	require.Equal(t, msg.Fee.Gas, uint64(flags.DefaultGasLimit))
 	require.Equal(t, len(msg.Msgs), 1)
 	require.Equal(t, 0, len(msg.GetSignatures()))
 
@@ -1266,12 +1267,14 @@ func TestTerraCLIConfig(t *testing.T) {
 	f.CLIConfig("chain-id", f.ChainID)
 	f.CLIConfig("trace", "false")
 	f.CLIConfig("indent", "true")
+	f.CLIConfig("keyring-backend", "test")
 
 	config, err := ioutil.ReadFile(path.Join(f.TerracliHome, "config", "config.toml"))
 	require.NoError(t, err)
 	expectedConfig := fmt.Sprintf(`broadcast-mode = "block"
 chain-id = "%s"
 indent = true
+keyring-backend = "test"
 node = "%s"
 output = "text"
 trace = false
@@ -1362,15 +1365,28 @@ func TestTerradAddGenesisAccount(t *testing.T) {
 	genesisState := f.GenesisState()
 
 	cdc := app.MakeCodec()
-	accounts := genaccounts.GetGenesisStateFromAppState(cdc, genesisState)
+	authState := auth.GetGenesisStateFromAppState(cdc, genesisState)
+	accounts := authState.Accounts
 
-	require.Equal(t, accounts[0].Address, f.KeyAddress(keyFoo))
-	require.Equal(t, accounts[1].Address, f.KeyAddress(keyBar))
-	require.True(t, accounts[0].Coins.IsEqual(startCoins))
-	require.True(t, accounts[1].Coins.IsEqual(bazCoins))
+	require.Equal(t, accounts[0].GetAddress(), f.KeyAddress(keyFoo))
+	require.Equal(t, accounts[1].GetAddress(), f.KeyAddress(keyBar))
+	require.True(t, accounts[0].GetCoins().IsEqual(startCoins))
+	require.True(t, accounts[1].GetCoins().IsEqual(bazCoins))
 
 	// Cleanup testing directories
 	f.Cleanup()
+}
+
+func TestEvidenceGetParams(t *testing.T) {
+	t.Parallel()
+	f := InitFixtures(t)
+
+	// start terrad server
+	proc := f.TDStart()
+	defer proc.Stop(false)
+
+	params := f.QueryEvidenceParams()
+	require.Equal(t, time.Duration(120000000000), params.MaxEvidenceAge)
 }
 
 func TestSlashingGetParams(t *testing.T) {
@@ -1382,7 +1398,6 @@ func TestSlashingGetParams(t *testing.T) {
 	defer proc.Stop(false)
 
 	params := f.QuerySlashingParams()
-	require.Equal(t, time.Duration(120000000000), params.MaxEvidenceAge)
 	require.Equal(t, int64(100), params.SignedBlocksWindow)
 	require.Equal(t, sdk.NewDecWithPrec(5, 1), params.MinSignedPerWindow)
 

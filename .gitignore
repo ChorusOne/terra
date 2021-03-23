@@ -15,10 +15,12 @@ build
 vendor
 .vendor-new
 build
+dist
 tools/bin/*
 examples/build/*
 docs/_build
 client/lcd/statik/statik.go
+tools-stamp
 
 # Data - ideally these don't exist
 examples/basecoin/app/data

@@ -4,7 +4,11 @@ PACKAGES_SIMTEST=$(shell go list ./... | grep '/simulation')
 VERSION := $(shell echo $(shell git describe --tags) | sed 's/^v//')
 COMMIT := $(shell git log -1 --format='%H')
 LEDGER_ENABLED ?= true
+BINDIR ?= $(GOPATH)/bin
 CORE_PACK := $(shell go list -m github.com/terra-project/core | sed  's/ /\@/g')
+ifneq ($(OS),Windows_NT)
+  UNAME_S = $(shell uname -s)
+endif
 
 export GO111MODULE = on
 
@@ -20,7 +24,6 @@ ifeq ($(LEDGER_ENABLED),true)
       build_tags += ledger
     endif
   else
-    UNAME_S = $(shell uname -s)
     ifeq ($(UNAME_S),OpenBSD)
       $(warning OpenBSD detected, disabling ledger support (https://github.com/cosmos/cosmos-sdk/issues/1988))
     else
@@ -76,8 +79,13 @@ else
 	go build -mod=readonly $(BUILD_FLAGS) -o build/terracli ./cmd/terracli
 endif
 
-build-linux: go.sum
-	LEDGER_ENABLED=false GOOS=linux GOARCH=amd64 $(MAKE) build
+build-linux:
+	mkdir -p ./build
+	docker build --tag terramoney/core ./
+	docker create --name temp terramoney/core:latest
+	docker cp temp:/usr/local/bin/terrad ./build/
+	docker cp temp:/usr/local/bin/terracli ./build/
+	docker rm temp
 
 build-contract-tests-hooks:
 ifeq ($(OS),Windows_NT)
@@ -93,7 +101,14 @@ install: go.sum
 install-debug: go.sum
 	go install -mod=readonly $(BUILD_FLAGS) ./cmd/terradebug
 
-
+update-swagger-docs: statik
+	$(BINDIR)/statik -src=client/lcd/swagger-ui -dest=client/lcd -f -m
+	@if [ -n "$(git status --porcelain)" ]; then \
+        echo "\033[91mSwagger docs are out of sync!!!\033[0m";\
+        exit 1;\
+    else \
+    	echo "\033[92mSwagger docs are in sync\033[0m";\
+    fi
 
 ########################################
 ### Tools & dependencies
@@ -114,8 +129,12 @@ draw-deps:
 clean:
 	rm -rf snapcraft-local.yaml build/
 
-distclean: clean
-	rm -rf vendor/
+distclean:
+	rm -rf \
+    gitian-build-darwin/ \
+    gitian-build-linux/ \
+    gitian-build-windows/ \
+    .gitian-builder-cache/
 
 ########################################
 ### Testing
@@ -134,7 +153,7 @@ test-cover:
 	@go test -mod=readonly -timeout 30m -race -coverprofile=coverage.txt -covermode=atomic -tags='ledger test_ledger_mock' ./...
 
 test-build: build
-	@go test -mod=readonly -p 4 `go list ./cli_test/...` -tags=cli_test -v
+	@go test -mod=readonly -p 4 `go list ./cli_test/...` -tags='cli_test skipsecretserviceintegrationtests' -v
 
 
 lint: golangci-lint
@@ -153,47 +172,23 @@ benchmark:
 
 ########################################
 ### Local validator nodes using docker and docker-compose
-
-build-docker-terradnode:
+build-docker-terradnode: build-linux
 	$(MAKE) -C networks/local
 
 # Run a 4-node testnet locally
+
 localnet-start: localnet-stop
-	@if ! [ -f build/node0/terrad/config/genesis.json ]; then docker run --rm -v $(CURDIR)/build:/terrad:Z tendermint/terradnode testnet --v 4 -o . --starting-ip-address 192.168.10.2 ; fi
+	@if ! [ -f build/node0/terrad/config/genesis.json ]; then docker run --rm -v $(CURDIR)/build:/terrad:Z terramoney/core testnet --v 4 -o . --starting-ip-address 192.168.10.2 --keyring-backend=test ; fi
 	docker-compose up -d
 
 # Stop testnet
 localnet-stop:
 	docker-compose down
 
-setup-contract-tests-data:
-	echo 'Prepare data for the contract tests'
-	rm -rf /tmp/contract_tests ; \
-	mkdir /tmp/contract_tests ; \
-	cp "${GOPATH}/pkg/mod/${CORE_PACK}/client/lcd/swagger-ui/swagger.yaml" /tmp/contract_tests/swagger.yaml ; \
-	./build/terrad init --home /tmp/contract_tests/.terrad --chain-id lcd contract-tests ; \
-	tar -xzf lcd_test/testdata/state.tar.gz -C /tmp/contract_tests/
-
-start-terra: setup-contract-tests-data
-	./build/terrad --home /tmp/contract_tests/.terrad start &
-	@sleep 2s
-
-setup-transactions: start-terra
-	@bash ./lcd_test/testdata/setup.sh
-
-run-lcd-contract-tests:
-	@echo "Running Terra LCD for contract tests"
-	./build/terracli rest-server --laddr tcp://0.0.0.0:8080 --home /tmp/contract_tests/.terracli --node http://localhost:26657 --chain-id lcd --trust-node true
-
-contract-tests: setup-transactions
-	@echo "Running Terra LCD for contract tests"
-	dredd && pkill terrad
-
 # include simulations
 include sims.mk
 
-.PHONY: all build-linux install install-debug \
-	go-mod-cache draw-deps clean build \
+.PHONY: all build-linux install install-debug format lint \
+	go-mod-cache draw-deps distclean build update-swagger-docs \
 	setup-transactions setup-contract-tests-data start-terra run-lcd-contract-tests contract-tests \
 	test test-all test-build test-cover test-unit test-race
-

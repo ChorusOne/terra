@@ -10,7 +10,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 
-	core "github.com/terra-project/core/types"
 	"github.com/terra-project/core/x/oracle"
 	"github.com/terra-project/core/x/slashing"
 	"github.com/terra-project/core/x/staking"
@@ -64,14 +63,20 @@ func (app *TerraApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []s
 
 	// withdraw all validator commission
 	app.stakingKeeper.IterateValidators(ctx, func(_ int64, val staking.ValidatorI) (stop bool) {
-		_, _ = app.distrKeeper.WithdrawValidatorCommission(ctx, val.GetOperator())
+		_, err := app.distrKeeper.WithdrawValidatorCommission(ctx, val.GetOperator())
+		if err != nil {
+			log.Fatal(err)
+		}
 		return false
 	})
 
 	// withdraw all delegator rewards
 	dels := app.stakingKeeper.GetAllDelegations(ctx)
 	for _, delegation := range dels {
-		_, _ = app.distrKeeper.WithdrawDelegationRewards(ctx, delegation.DelegatorAddress, delegation.ValidatorAddress)
+		_, err := app.distrKeeper.WithdrawDelegationRewards(ctx, delegation.DelegatorAddress, delegation.ValidatorAddress)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// clear validator slash events
@@ -90,7 +95,7 @@ func (app *TerraApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []s
 		// donate any unwithdrawn outstanding reward fraction tokens to the community pool
 		scraps := app.distrKeeper.GetValidatorOutstandingRewards(ctx, val.GetOperator())
 		feePool := app.distrKeeper.GetFeePool(ctx)
-		feePool.CommunityPool = feePool.CommunityPool.Add(scraps)
+		feePool.CommunityPool = feePool.CommunityPool.Add(scraps...)
 		app.distrKeeper.SetFeePool(ctx, feePool)
 
 		app.distrKeeper.Hooks().AfterValidatorCreated(ctx, val.GetOperator())
@@ -132,7 +137,6 @@ func (app *TerraApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []s
 	iter := sdk.KVStoreReversePrefixIterator(store, staking.ValidatorsKey)
 	counter := int16(0)
 
-	var valConsAddrs []sdk.ConsAddress
 	for ; iter.Valid(); iter.Next() {
 		addr := sdk.ValAddress(iter.Key()[1:])
 		validator, found := app.stakingKeeper.GetValidator(ctx, addr)
@@ -141,7 +145,6 @@ func (app *TerraApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []s
 		}
 
 		validator.UnbondingHeight = 0
-		valConsAddrs = append(valConsAddrs, validator.ConsAddress())
 		if applyWhiteList && !whiteListMap[addr.String()] {
 			validator.Jailed = true
 		}
@@ -161,6 +164,7 @@ func (app *TerraApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []s
 		ctx,
 		func(addr sdk.ConsAddress, info slashing.ValidatorSigningInfo) (stop bool) {
 			info.StartHeight = 0
+			info.Address = addr
 			app.slashingKeeper.SetValidatorSigningInfo(ctx, addr, info)
 			return false
 		},
@@ -169,21 +173,36 @@ func (app *TerraApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []s
 	/* Handle oracle state. */
 
 	// Clear all prevotes
-	app.oracleKeeper.IteratePrevotes(ctx, func(prevote oracle.PricePrevote) (stop bool) {
-		app.oracleKeeper.DeletePrevote(ctx, prevote)
+	app.oracleKeeper.IterateExchangeRatePrevotes(ctx, func(prevote oracle.ExchangeRatePrevote) (stop bool) {
+		app.oracleKeeper.DeleteExchangeRatePrevote(ctx, prevote)
 
 		return false
 	})
 
 	// Clear all votes
-	app.oracleKeeper.IterateVotes(ctx, func(vote oracle.PriceVote) (stop bool) {
-		app.oracleKeeper.DeleteVote(ctx, vote)
+	app.oracleKeeper.IterateExchangeRateVotes(ctx, func(vote oracle.ExchangeRateVote) (stop bool) {
+		app.oracleKeeper.DeleteExchangeRateVote(ctx, vote)
 		return false
 	})
 
 	// Clear all prices
-	app.oracleKeeper.IterateLunaPrices(ctx, func(denom string, price sdk.Dec) bool {
-		app.oracleKeeper.DeletePrice(ctx, denom)
+	app.oracleKeeper.IterateLunaExchangeRates(ctx, func(denom string, _ sdk.Dec) bool {
+		app.oracleKeeper.DeleteLunaExchangeRate(ctx, denom)
+		return false
+	})
+
+	app.oracleKeeper.IterateMissCounters(ctx, func(operator sdk.ValAddress, _ int64) bool {
+		app.oracleKeeper.SetMissCounter(ctx, operator, 0)
+		return false
+	})
+
+	app.oracleKeeper.IterateAggregateExchangeRatePrevotes(ctx, func(aggregatePrevote oracle.AggregateExchangeRatePrevote) (stop bool) {
+		app.oracleKeeper.DeleteAggregateExchangeRatePrevote(ctx, aggregatePrevote)
+		return false
+	})
+
+	app.oracleKeeper.IterateAggregateExchangeRateVotes(ctx, func(aggregateVote oracle.AggregateExchangeRateVote) bool {
+		app.oracleKeeper.DeleteAggregateExchangeRateVote(ctx, aggregateVote)
 		return false
 	})
 
@@ -194,18 +213,7 @@ func (app *TerraApp) prepForZeroHeightGenesis(ctx sdk.Context, jailWhiteList []s
 
 	/* Handle treasury state. */
 
-	// clear all historical issuance info
-	app.treasuryKeeper.ClearHistoricalIssuance(ctx)
-	// clear all tax proceeds
-	app.treasuryKeeper.ClearTaxProceeds(ctx)
-
-	// left last tax rate
-	lastTaxRate := app.treasuryKeeper.GetTaxRate(ctx, core.GetEpoch(ctx))
-	app.treasuryKeeper.ClearTaxRates(ctx)
-	app.treasuryKeeper.SetTaxRate(ctx, 0, lastTaxRate)
-
-	// left last reward weight
-	lastRewardWeight := app.treasuryKeeper.GetRewardWeight(ctx, core.GetEpoch(ctx))
-	app.treasuryKeeper.ClearRewardWeights(ctx)
-	app.treasuryKeeper.SetRewardWeight(ctx, 0, lastRewardWeight)
+	// update cumulated height
+	newCumulativeHeight := app.treasuryKeeper.GetCumulativeHeight(ctx) + ctx.BlockHeight()
+	app.treasuryKeeper.SetCumulativeHeight(ctx, newCumulativeHeight)
 }

@@ -11,49 +11,42 @@ import (
 )
 
 const (
-	DefaultCodespace     = types.DefaultCodespace
-	CodeInsufficientSwap = types.CodeInsufficientSwap
-	CodeNoEffectivePrice = types.CodeNoEffectivePrice
-	CodeRecursiveSwap    = types.CodeRecursiveSwap
-	CodeInactive         = types.CodeInactive
-	ModuleName           = types.ModuleName
-	StoreKey             = types.StoreKey
-	RouterKey            = types.RouterKey
-	QuerierRoute         = types.QuerierRoute
-	DefaultParamspace    = types.DefaultParamspace
-	QuerySwap            = types.QuerySwap
-	QueryTerraPoolDelta  = types.QueryTerraPoolDelta
-	QueryParameters      = types.QueryParameters
+	ModuleName          = types.ModuleName
+	StoreKey            = types.StoreKey
+	RouterKey           = types.RouterKey
+	QuerierRoute        = types.QuerierRoute
+	DefaultParamspace   = types.DefaultParamspace
+	QuerySwap           = types.QuerySwap
+	QueryTerraPoolDelta = types.QueryTerraPoolDelta
+	QueryParameters     = types.QueryParameters
 )
 
 var (
 	// functions aliases
-	RegisterCodec            = types.RegisterCodec
-	ErrNoEffectivePrice      = types.ErrNoEffectivePrice
-	ErrInsufficientSwapCoins = types.ErrInsufficientSwapCoins
-	ErrRecursiveSwap         = types.ErrRecursiveSwap
-	NewGenesisState          = types.NewGenesisState
-	DefaultGenesisState      = types.DefaultGenesisState
-	ValidateGenesis          = types.ValidateGenesis
-	NewMsgSwap               = types.NewMsgSwap
-	DefaultParams            = types.DefaultParams
-	NewQuerySwapParams       = types.NewQuerySwapParams
-	NewKeeper                = keeper.NewKeeper
-	ParamKeyTable            = keeper.ParamKeyTable
-	NewQuerier               = keeper.NewQuerier
+	RegisterCodec       = types.RegisterCodec
+	ErrNoEffectivePrice = types.ErrNoEffectivePrice
+	ErrInvalidOfferCoin = types.ErrInvalidOfferCoin
+	ErrRecursiveSwap    = types.ErrRecursiveSwap
+	NewGenesisState     = types.NewGenesisState
+	DefaultGenesisState = types.DefaultGenesisState
+	ValidateGenesis     = types.ValidateGenesis
+	NewMsgSwap          = types.NewMsgSwap
+	NewMsgSwapSend      = types.NewMsgSwapSend
+	DefaultParams       = types.DefaultParams
+	NewQuerySwapParams  = types.NewQuerySwapParams
+	ParamKeyTable       = types.ParamKeyTable
+	NewKeeper           = keeper.NewKeeper
+	NewQuerier          = keeper.NewQuerier
 
 	// variable aliases
 	ModuleCdc                       = types.ModuleCdc
 	TerraPoolDeltaKey               = types.TerraPoolDeltaKey
 	ParamStoreKeyBasePool           = types.ParamStoreKeyBasePool
 	ParamStoreKeyPoolRecoveryPeriod = types.ParamStoreKeyPoolRecoveryPeriod
-	ParamStoreKeyMinSpread          = types.ParamStoreKeyMinSpread
-	ParmamStoreKeyTobinTax          = types.ParmamStoreKeyTobinTax
+	ParamStoreKeyMinSpread          = types.ParamStoreKeyMinStabilitySpread
 	DefaultBasePool                 = types.DefaultBasePool
 	DefaultPoolRecoveryPeriod       = types.DefaultPoolRecoveryPeriod
-	DefaultTerraLiquidityRatio      = types.DefaultTerraLiquidityRatio
-	DefaultMinSpread                = types.DefaultMinSpread
-	DefaultTobinTax                 = types.DefaultTobinTax
+	DefaultMinSpread                = types.DefaultMinStabilitySpread
 )
 
 type (
@@ -61,6 +54,7 @@ type (
 	OracleKeeper    = types.OracleKeeper
 	GenesisState    = types.GenesisState
 	MsgSwap         = types.MsgSwap
+	MsgSwapSend     = types.MsgSwapSend
 	Params          = types.Params
 	QuerySwapParams = types.QuerySwapParams
 	Keeper          = keeper.Keeper
